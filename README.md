@@ -9,7 +9,7 @@ available soon
 1. Clone the repository recursively:
 
    ```bash
-   git clone --recursive github.com/YertleTurtleGit/spherical-scanner
+   git clone --recursive https://github.com/YertleTurtleGit/spherical-scanner
    ```
 
 2. Open your preferred web browser and open the
@@ -27,7 +27,7 @@ available soon
 1. Clone the repository recursively:
 
    ```bash
-   git clone --recursive github.com/YertleTurtleGit/spherical-scanner
+   git clone --recursive https://github.com/YertleTurtleGit/spherical-scanner
    ```
 
 2. Open
