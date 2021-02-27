@@ -18,11 +18,11 @@ available soon
 ## Code Editing and Building on Local Maschine
 
 0. You need to have Visual Studio Code
-   (code.visualstudio.com) with TypeScript
-   (www.typescriptlang.org) support installed on your
+   ([code.visualstudio.com](https://code.visualstudio.com/)) with TypeScript
+   ([www.typescriptlang.org](https://www.typescriptlang.org/)) support installed on your
    maschine to edit and build the code. You can use the
    following guide:
-   code.visualstudio.com/Docs/languages/typescript
+   [code.visualstudio.com/Docs/languages/typescript](https://code.visualstudio.com/Docs/languages/typescript)
 
 1. Clone the repository recursively:
 
