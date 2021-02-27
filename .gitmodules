@@ -1,0 +1,3 @@
+[submodule "tsgl"]
+	path = tsgl
+	url = https://github.com/YertleTurtleGit/tsgl
