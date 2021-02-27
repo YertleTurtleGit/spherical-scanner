@@ -4,7 +4,7 @@
 
 available soon
 
-## Run on nearly every Local Maschine with a Web Browser
+## Run on nearly every Local Maschine in Web Browser
 
 1. Clone the repository recursively:
 
@@ -39,6 +39,6 @@ available soon
 
 4. Press F5 to run the application in the chromium web
    browser. You may have to configure the
-   ['launch.json'](launch.json) file to fit your setup.
-   Alternatively you can open your preferred web browser and
-   open the ['index.html'](index.html) file.
+   ['launch.json'](.vscode/launch.json) file to fit your
+   setup. Alternatively you can open your preferred web
+   browser and open the ['index.html'](index.html) file.
