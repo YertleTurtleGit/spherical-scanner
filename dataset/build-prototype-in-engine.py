@@ -13,13 +13,12 @@ RADIUS = 2  # Measured in meter.
 LIGHT_COUNT = 20  # Light count on one circle of 360 degrees.
 POLAR_RESOLUTION = 20  # Light count for simulating rotation of 180 degrees.
 BRIGHTNESS_FACTOR = 0.5
-LIGHT_ORIGINS = [0, 45, 90, 135, 180, 225, 270, 315]
+LIGHT_ORIGINS = [0, 90, 180, 270]
 ALL_LIGHT_IMAGE = True
 CAMERA_AZIMUTHAL_STEPS = 4
 CAMERA_POLAR_STEPS = CAMERA_AZIMUTHAL_STEPS / 2
 
 OBJECT_NAME = "testobject"
-POLAR_FILE_NAME = "090"
 
 if(RENDER_ENGINE is RENDER_ENGINES.BLENDER):
     import bpy
@@ -54,6 +53,15 @@ def angleBetweenVectors(vectorA, vectorB):
     return np.arccos(dotProduct)
 
 
+def getThreeDigitString(number):
+    numberString = str(number)
+
+    while(len(numberString) < 3):
+        numberString = "0" + numberString
+
+    return numberString
+
+
 class SphericalScannerPrototype:
 
     def __init__(self,
@@ -64,8 +72,7 @@ class SphericalScannerPrototype:
                  lightOrigins=LIGHT_ORIGINS,
                  cameraAzimuthalSteps=CAMERA_AZIMUTHAL_STEPS,
                  cameraPolarSteps=CAMERA_POLAR_STEPS,
-                 objectName=OBJECT_NAME,
-                 polarFileName=POLAR_FILE_NAME):
+                 objectName=OBJECT_NAME):
         self.__radius = radius
         self.__lightCount = lightCount
         self.__polarResolution = polarResolution
@@ -75,7 +82,6 @@ class SphericalScannerPrototype:
         self.__lightOriginsDegree = lightOrigins
         self.__lightOrigins = self.__convertLightOrigins(lightOrigins)
         self.__objectName = objectName
-        self.__polarFileName = polarFileName
 
         self.__cameraObject = None
         self.__azimuthalLightPositions = None
@@ -83,6 +89,7 @@ class SphericalScannerPrototype:
         self.__azimuthalCameraPositions = None
         self.__cameraPositions = None
         self.__lightObjects = []
+        self.__frames = []
 
     def __convertLightOrigins(self, lightOrigins):
         convertedLightOrigins = []
@@ -381,35 +388,51 @@ class SphericalScannerPrototype:
 
         print("Finished building keyframes.")
 
-    def getFilenameOfFrame(self, frame):
-        azimuthalIndex = 1
-        while(frame % azimuthalIndex is not 0):
-            azimuthalIndex += 1
-        azimuthal = self.__lightOriginsDegree[azimuthalIndex - 1]
-        azimuthalName = str(azimuthal)
-        while(len(azimuthalName) < 3):
-            azimuthalName = "0" + azimuthalName
+    def getFilenameFromFrame(self, frame):
 
-        cameraIndex = 1
-        while(frame % cameraIndex * azimuthalIndex is not 0):
-            cameraIndex += 1
-        cameraName = str(cameraIndex)
+        lightPositionsCount = len(self.__lightOrigins)
+        if(ALL_LIGHT_IMAGE):
+            lightPositionsCount += 1
 
-        return (self.__objectName + "_"
-                + cameraName + "_"
-                + azimuthalName
-                + "_" + self.__polarFileName)
+        lightAzimuthal = frame - 1
+        while(lightAzimuthal > lightPositionsCount - 1):
+            lightAzimuthal -= len(self.__lightOrigins)
+
+        if(lightAzimuthal <= len(self.__lightOrigins) - 1):
+            lightAzimuthal = self.__lightOriginsDegree[lightAzimuthal]
+            lightAzimuthalName = getThreeDigitString(lightAzimuthal)
+        else:
+            lightAzimuthalName = "all"
+
+        frame -= lightAzimuthal
+        cameraPolar = frame
+        cameraPolarPositionsCount = round(360 / self.__cameraPolarSteps)
+
+        while(cameraPolar > cameraPolarPositionsCount):
+            cameraPolar -= cameraPolarPositionsCount
+
+        cameraPolarName = getThreeDigitString(cameraPolar)
+
+        cameraAzimuthal = 0
+
+        cameraAzimuthalName = getThreeDigitString(cameraAzimuthal)
+
+
+        # {object name}_c-{camera azimuthal angle}-{camera polar angle}_l-{light azimuthal angle}
+        return (self.__objectName + "_c-" + cameraAzimuthalName + "-" + cameraPolarName + "_l-" + lightAzimuthalName)
 
 
 SphericalScannerPrototype = SphericalScannerPrototype()
 SphericalScannerPrototype.buildKeyframes()
 
 if(RENDER_ENGINE is RENDER_ENGINES.BLENDER):
+    currentFilePath = bpy.context.scene.render.filepath
+
     def onFrameChange(scene):
         bpy.context.scene.render.filepath = os.path.join(
-            "/home/yertle/Desktop/testrender/",
-            SphericalScannerPrototype.getFilenameOfFrame(scene.frame_current))
-        print(SphericalScannerPrototype.getFilenameOfFrame(scene.frame_current))
+            currentFilePath,
+            SphericalScannerPrototype.getFilenameFromFrame(scene.frame_current))
+        print(SphericalScannerPrototype.getFilenameFromFrame(scene.frame_current))
 
     bpy.app.handlers.frame_change_pre.clear()
     bpy.app.handlers.frame_change_pre.append(onFrameChange)
@@ -417,4 +440,5 @@ if(RENDER_ENGINE is RENDER_ENGINES.MAYA):
     """
     TODO (optional):
     - name the rendered files
+      (use SphericalScannerPrototype.getFilenameFromFrame())
     """
