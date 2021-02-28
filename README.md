@@ -1,8 +1,8 @@
-# Spherical Scanner
+# Spherical Scanner (not working, do not try to use)
 
 ## Live Demo in Web Browser
 
-available soon
+[yertleturtlegit.github.io/spherical-scanner](https://yertleturtlegit.github.io/spherical-scanner/)
 
 ## Run on nearly every Local Maschine in Web Browser
 
