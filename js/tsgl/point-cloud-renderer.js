@@ -138,7 +138,7 @@ class PointCloudRenderer {
     startRendering() {
         console.log("Loading rendered point cloud preview.");
         this.initializeContext();
-        this.render(0);
+        setTimeout(this.render.bind(this, 0));
     }
     render(now) {
         now *= 1.001;
@@ -148,6 +148,6 @@ class PointCloudRenderer {
         this.rotation += this.deltaTime * this.rotationSpeed;
         this.gl.uniform1f(this.rotationUniform, this.rotation);
         this.gl.drawArrays(this.gl.POINTS, 0, this.vertexCount);
-        window.requestAnimationFrame(this.render.bind(this));
+        window.requestAnimationFrame(this.render.bind(this, performance.now()));
     }
 }

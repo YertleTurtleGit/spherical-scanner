@@ -428,23 +428,28 @@ class GlslRendering {
         return new GlslRendering(GlslShader.getGlslContext(), outVariable);
     }
     getPixelArray() {
-        if (this.pixelArray === undefined) {
+        if (!this.pixelArray) {
             this.pixelArray = this.glslContext.renderPixelArray(this.outVariable);
         }
         return this.pixelArray;
     }
     getDataUrl() {
-        if (this.dataUrl === undefined) {
+        if (!this.dataUrl) {
             this.getPixelArray();
             this.dataUrl = this.glslContext.renderDataUrl();
         }
         return this.dataUrl;
     }
-    getJsImage(onloadCallback) {
-        if (this.jsImage === undefined) {
-            this.jsImage = new Image();
-            this.jsImage.addEventListener("load", onloadCallback);
-            this.jsImage.src = this.getDataUrl();
+    async getJsImage() {
+        if (!this.jsImage) {
+            const thisDataUrl = this.getDataUrl();
+            this.jsImage = await new Promise((resolve) => {
+                const image = new Image();
+                image.addEventListener("load", () => {
+                    resolve(image);
+                });
+                image.src = thisDataUrl;
+            });
         }
         return this.jsImage;
     }

@@ -54,6 +54,7 @@ def angleBetweenVectors(vectorA, vectorB):
 
 
 def getThreeDigitString(number):
+    number = int(number)
     numberString = str(number)
 
     while(len(numberString) < 3):
@@ -390,36 +391,41 @@ class SphericalScannerPrototype:
 
     def getFilenameFromFrame(self, frame):
 
-        lightPositionsCount = len(self.__lightOrigins)
+        frame -= 1
+
+        lightAzimuthalRepeat = 1
+        lightAzimuthalCount = len(self.__lightOrigins)
         if(ALL_LIGHT_IMAGE):
-            lightPositionsCount += 1
+            lightAzimuthalCount += 1
 
-        lightAzimuthal = frame - 1
-        while(lightAzimuthal > lightPositionsCount - 1):
-            lightAzimuthal -= len(self.__lightOrigins)
+        lightAzimuthalIndex = math.floor(frame / lightAzimuthalRepeat)
+        while(lightAzimuthalIndex > lightAzimuthalCount - 1):
+            lightAzimuthalIndex -= lightAzimuthalCount
 
-        if(lightAzimuthal <= len(self.__lightOrigins) - 1):
-            lightAzimuthal = self.__lightOriginsDegree[lightAzimuthal]
-            lightAzimuthalName = getThreeDigitString(lightAzimuthal)
-        else:
+        if(ALL_LIGHT_IMAGE and lightAzimuthalIndex == lightAzimuthalCount - 1):
             lightAzimuthalName = "all"
+        else:
+            lightAzimuthalName = getThreeDigitString(self.__lightOriginsDegree[lightAzimuthalIndex])
 
-        frame -= lightAzimuthal
-        cameraPolar = frame
-        cameraPolarPositionsCount = round(360 / self.__cameraPolarSteps)
+        cameraAzimuthalRepeat = lightAzimuthalCount
+        cameraAzimuthalIndex = math.floor(frame / cameraAzimuthalRepeat)
+        while(cameraAzimuthalIndex > self.__cameraAzimuthalSteps):
+            cameraAzimuthalIndex -= self.__cameraAzimuthalSteps
 
-        while(cameraPolar > cameraPolarPositionsCount):
-            cameraPolar -= cameraPolarPositionsCount
+        cameraAzimuthalName = getThreeDigitString(cameraAzimuthalIndex * (360 / self.__cameraAzimuthalSteps))
 
-        cameraPolarName = getThreeDigitString(cameraPolar)
+        cameraPolarRepeat = lightAzimuthalCount + self.__cameraAzimuthalSteps
+        cameraPolarIndex = math.floor(frame / cameraPolarRepeat)
+        while(cameraPolarIndex > self.__cameraPolarSteps):
+            cameraPolarIndex -= self.__cameraPolarSteps
 
-        cameraAzimuthal = 0
+        cameraPolarName = getThreeDigitString(cameraPolarIndex * (360 / self.__cameraPolarSteps))
 
-        cameraAzimuthalName = getThreeDigitString(cameraAzimuthal)
-
-
-        # {object name}_c-{camera azimuthal angle}-{camera polar angle}_l-{light azimuthal angle}
-        return (self.__objectName + "_c-" + cameraAzimuthalName + "-" + cameraPolarName + "_l-" + lightAzimuthalName)
+        # {object name}_ca-{camera azimuthal angle}_cp-{camera polar angle}_la-{light azimuthal angle}
+        return (self.__objectName
+                + "_ca-" + cameraAzimuthalName
+                + "_cp-" + cameraPolarName
+                + "_l-" + lightAzimuthalName)
 
 
 SphericalScannerPrototype = SphericalScannerPrototype()

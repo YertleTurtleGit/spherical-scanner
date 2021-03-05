@@ -1,4 +1,11 @@
 "use strict";
+/*
+Spherical Coordinates
+The azimuthal angle is denoted by φ (phi).
+The polar angle is denoted by θ (theta).
+In the following, the notation [φ, θ] is used.
+https://www.geogebra.org/m/FzkZPN3K
+*/
 const EAST = 0;
 const NORTH_EAST = 45;
 const NORTH = 90;
@@ -39,15 +46,22 @@ class NormalMap {
         shader.purge();
         return normalMap;
     }
-    downloadAsImage(fileName) {
-        fileName += ".png";
-        let element = document.createElement("a");
-        element.setAttribute("href", this.getAsDataUrl());
-        element.setAttribute("download", fileName);
-        element.style.display = "none";
-        document.body.appendChild(element);
-        element.click();
-        document.body.removeChild(element);
+    downloadAsImage(fileName, button) {
+        button.style.display = "none";
+        const cThis = this;
+        setTimeout(() => {
+            fileName += ".png";
+            let element = document.createElement("a");
+            element.setAttribute("href", cThis.getAsDataUrl());
+            element.setAttribute("download", fileName);
+            element.style.display = "none";
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+            setTimeout(() => {
+                button.style.display = "inherit";
+            }, 500);
+        });
     }
     getAsDataUrl() {
         if (this.dataUrl !== null) {
@@ -70,7 +84,7 @@ class NormalMap {
         console.warn("Call calculate first.");
         return null;
     }
-    calculate(onloadCallback) {
+    async calculate() {
         const dimensionReferenceImage = this.dataset.getImage(LIGHTING_AZIMUTHAL_ANGLES[0]);
         const width = dimensionReferenceImage.width;
         const height = dimensionReferenceImage.height;
@@ -161,7 +175,7 @@ class NormalMap {
             TODO:
             Somewhere and somehow the red and green channels are swapped.
             Thus, there are swapped here again.
-         */
+            */
             result = new GlslVector3([
                 normalVector.channel(1 /* GREEN */),
                 normalVector.channel(0 /* RED */),
@@ -171,7 +185,7 @@ class NormalMap {
         const rendering = GlslRendering.render(result);
         this.pixelArray = rendering.getPixelArray();
         this.dataUrl = rendering.getDataUrl();
-        this.jsImageObject = rendering.getJsImage(onloadCallback);
+        this.jsImageObject = await rendering.getJsImage();
         normalMapShader.purge();
     }
     getAnisotropicNormalVector(imageLuminances, originAzimuthalAngle, orthogonalAzimuthalAngle, oppositeAzimuthalAngle) {
