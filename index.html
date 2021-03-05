@@ -8,11 +8,22 @@
    </head>
 
    <body>
+      <div id="content-grid">
+         <div id="input-area">
+            <button id="add-images-button">add input images</button>
+            <button id="test-dataset-button">use test dataset</button>
+         </div>
+         <div id="point-cloud-area"></div>
+         <div id="loading-area"></div>
+      </div>
+
       <script src="js/declarations.js"></script>
+      <script src="js/tsgl/dom-status-element.js"></script>
       <script src="js/tsgl/spherical-coordinate.js"></script>
       <script src="js/tsgl/glsl-shader.js"></script>
       <script src="js/tsgl/screen-lighting.js"></script>
       <script src="js/tsgl/webcam.js"></script>
+      <script src="js/spherical-dataset.js"></script>
       <script src="js/tsgl/dataset.js"></script>
       <script src="js/tsgl/point-cloud.js"></script>
       <script src="js/tsgl/point-cloud-renderer.js"></script>

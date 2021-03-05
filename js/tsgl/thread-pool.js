@@ -1,17 +1,15 @@
 "use strict";
 const MAX_RUNNING_THREADS_IN_POOL = 32;
-const POOL_STATUS_REFRESH_INTERVAL_PERCENT = 4;
+const POOL_STATUS_REFRESH_INTERVAL_PERCENT = 5;
 class ThreadPool {
-    constructor(statusDescription, statusLevel, statusCallback, maxRunningThreadCount = MAX_RUNNING_THREADS_IN_POOL, statusRefreshIntervalPercent = POOL_STATUS_REFRESH_INTERVAL_PERCENT) {
+    constructor(domStatusElement, maxRunningThreadCount = MAX_RUNNING_THREADS_IN_POOL, statusRefreshIntervalPercent = POOL_STATUS_REFRESH_INTERVAL_PERCENT) {
         this.threads = [];
         this.results = [];
         this.statusRefreshInterval = 1;
         this.lastStatusRefresh = 0;
         this.finishedThreadsCount = 0;
         this.statusProgressPercent = 0;
-        this.statusDescription = statusDescription;
-        this.statusLevel = statusLevel;
-        this.statusCallback = statusCallback;
+        this.domStatusElement = domStatusElement;
         this.maxRunningThreadCount = maxRunningThreadCount;
         this.statusRefreshIntervalPercent = statusRefreshIntervalPercent;
     }
@@ -35,6 +33,7 @@ class ThreadPool {
             while (!threadPool.isFinished()) {
                 await new Promise((r) => setTimeout(r, 500));
             }
+            this.domStatusElement.setFinish();
             resolve(threadPool.results);
         });
     }
@@ -50,10 +49,7 @@ class ThreadPool {
                 this.results.push(this.threads[i].getResult());
             }
             const durationInSeconds = Math.round(performance.now() - this.startTime);
-            console.log(this.statusDescription +
-                " Finished and took " +
-                durationInSeconds +
-                "ms.");
+            // TODO: Display duration.
             this.updateStatus();
         }
         else {
@@ -85,7 +81,7 @@ class ThreadPool {
     updateStatus() {
         this.statusProgressPercent =
             (this.finishedThreadsCount / this.threads.length) * 100;
-        this.statusCallback(this.statusDescription, this.statusLevel, this.statusProgressPercent);
+        this.domStatusElement.updateProgress(this.statusProgressPercent);
     }
 }
 class Thread {

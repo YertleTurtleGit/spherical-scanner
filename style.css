@@ -11,3 +11,72 @@ body {
    background-color: var(--background-color);
    color: var(--text-color);
 }
+
+p {
+   color: var(--text-color-darker);
+}
+
+canvas {
+   background-color: transparent;
+}
+
+button {
+   margin: 5px;
+   border: 1px solid var(--text-color);
+   color: var(--text-color);
+   background-color: var(--button-color);
+   border-radius: 20px;
+   padding: 10px;
+   transition: all 0.5s;
+}
+
+button:hover {
+   border-radius: 0px;
+   background-color: var(--brighter-color);
+   cursor: pointer;
+}
+
+progress::-moz-progress-bar {
+   background-color: var(--accent-color);
+   border-radius: 100px;
+   appearance: none;
+}
+progress::-webkit-progress-value {
+   background: var(--accent-color);
+   border-radius: 100px;
+   appearance: none;
+}
+
+progress::-webkit-progress-bar {
+   border-radius: 100px;
+}
+
+progress {
+   border-radius: 100px;
+   -webkit-appearance: none;
+   appearance: none;
+}
+
+#content-grid {
+   display: grid;
+   position: absolute;
+   top: 0;
+   left: 0;
+   width: 100%;
+   height: 100%;
+   grid-template-areas: "input-area    point-cloud-area    loading-area";
+   grid-template-columns: 10% 80% 10%;
+   grid-template-rows: 100%;
+}
+
+#input-area {
+   grid-area: input-area;
+   padding: 20px;
+}
+#point-cloud-area {
+   grid-area: point-cloud-area;
+}
+#loading-area {
+   grid-area: loading-area;
+   padding: 20px;
+}

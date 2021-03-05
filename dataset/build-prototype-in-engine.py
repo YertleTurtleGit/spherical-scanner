@@ -19,6 +19,7 @@ CAMERA_AZIMUTHAL_STEPS = 4
 CAMERA_POLAR_STEPS = CAMERA_AZIMUTHAL_STEPS / 2
 
 OBJECT_NAME = "testobject"
+FILE_EXTENSION = "png"
 
 if(RENDER_ENGINE is RENDER_ENGINES.BLENDER):
     import bpy
@@ -73,7 +74,8 @@ class SphericalScannerPrototype:
                  lightOrigins=LIGHT_ORIGINS,
                  cameraAzimuthalSteps=CAMERA_AZIMUTHAL_STEPS,
                  cameraPolarSteps=CAMERA_POLAR_STEPS,
-                 objectName=OBJECT_NAME):
+                 objectName=OBJECT_NAME,
+                 fileExtension=FILE_EXTENSION):
         self.__radius = radius
         self.__lightCount = lightCount
         self.__polarResolution = polarResolution
@@ -83,6 +85,7 @@ class SphericalScannerPrototype:
         self.__lightOriginsDegree = lightOrigins
         self.__lightOrigins = self.__convertLightOrigins(lightOrigins)
         self.__objectName = objectName
+        self.__fileExtension = fileExtension
 
         self.__cameraObject = None
         self.__azimuthalLightPositions = None
@@ -425,7 +428,8 @@ class SphericalScannerPrototype:
         return (self.__objectName
                 + "_ca-" + cameraAzimuthalName
                 + "_cp-" + cameraPolarName
-                + "_l-" + lightAzimuthalName)
+                + "_l-" + lightAzimuthalName
+                + "." + self.__fileExtension)
 
 
 SphericalScannerPrototype = SphericalScannerPrototype()

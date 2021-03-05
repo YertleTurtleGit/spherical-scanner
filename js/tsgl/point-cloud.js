@@ -157,14 +157,17 @@ class PointCloud {
         pointCloudShader.purge();
         return gradientPixelArray;
     }
-    calculateAnisotropicIntegral(azimuthalAngle, gradientPixelArray, statusCallback) {
+    calculateAnisotropicIntegral(azimuthalAngle, gradientPixelArray) {
         const integral = new Array(this.width * this.height);
         let pixelLines = this.getPixelLinesFromAzimuthalAngle(azimuthalAngle, gradientPixelArray);
-        statusCallback("Calculating " +
-            pixelLines.length +
-            " integrals from azimuthal angle " +
-            azimuthalAngle +
-            ".", 3);
+        /*console.log(
+           "Calculating " +
+              pixelLines.length +
+              " integrals from azimuthal angle " +
+              azimuthalAngle +
+              ".",
+           3
+        );*/
         for (let j = 0; j < pixelLines.length; j++) {
             let lineOffset = 0;
             for (let k = 0; k < pixelLines[j].length; k++) {
@@ -175,7 +178,7 @@ class PointCloud {
         }
         return integral;
     }
-    summarizeHorizontalImageLine(y, statusCallback, samplingRateStepX, resolution, normalMapPixelArray) {
+    summarizeHorizontalImageLine(y, samplingRateStepX, resolution, normalMapPixelArray) {
         const result = { averageError: 0, highestError: 0, zErrors: new Array(this.width) };
         for (let x = 0; x < this.width; x += samplingRateStepX) {
             const index = x + y * this.width;
@@ -231,15 +234,17 @@ class PointCloud {
         }
         return result;
     }
-    async calculate(statusCallback) {
-        statusCallback("Integrating normal map.", 0);
-        const gradientThreadPool = new ThreadPool("Calculating slopes.", 1, statusCallback);
+    async calculate() {
+        const gradientDOMStatus = new DOMStatusElement("Calculating slopes.");
+        const integralDOMStatus = new DOMStatusElement("Integrating normal mapping.");
+        const summarizeDOMStatus = new DOMStatusElement("Summarizing data.");
+        const gradientThreadPool = new ThreadPool(gradientDOMStatus);
         gradientThreadPool.add(this.getLocalGradientFactor.bind(this));
         const gradientPixelArrayPromise = await gradientThreadPool.run();
         const gradientPixelArray = gradientPixelArrayPromise[0];
-        const integralThreadPool = new ThreadPool("Calculating integrals.", 1, statusCallback);
+        const integralThreadPool = new ThreadPool(integralDOMStatus);
         for (let i = 0, length = this.azimuthalAngles.length; i < length; i++) {
-            const integralMethod = this.calculateAnisotropicIntegral.bind(this, this.azimuthalAngles[i], gradientPixelArray, statusCallback);
+            const integralMethod = this.calculateAnisotropicIntegral.bind(this, this.azimuthalAngles[i], gradientPixelArray);
             integralThreadPool.add(integralMethod);
         }
         this.integrals = await integralThreadPool.run();
@@ -263,9 +268,9 @@ class PointCloud {
         this.gpuVertexAlbedoColors = new Array(dimensionThreeChannel);
         this.gpuVertexNormalColors = new Array(dimensionThreeChannel);
         const normalMapPixelArray = this.normalMap.getAsPixelArray();
-        const summerizeThreadPool = new ThreadPool("Summarizing data.", 1, statusCallback);
+        const summerizeThreadPool = new ThreadPool(summarizeDOMStatus);
         for (let y = 0; y < this.height; y += samplingRateStep.y) {
-            const summerizeMethod = this.summarizeHorizontalImageLine.bind(this, y, statusCallback, samplingRateStep.x, resolution, normalMapPixelArray);
+            const summerizeMethod = this.summarizeHorizontalImageLine.bind(this, y, samplingRateStep.x, resolution, normalMapPixelArray);
             summerizeThreadPool.add(summerizeMethod);
         }
         const results = await summerizeThreadPool.run();
@@ -282,8 +287,8 @@ class PointCloud {
                 zErrors.push(zErrorsLine[i]);
             }
         }
-        statusCallback("Average error of z values: " + averageError, 1);
-        /*uiLog(
+        console.log("Average error of z values: " + averageError, 1);
+        /*console.log(
            "Reduced point cloud resolution by around " +
               Math.round(100 - (resolution / (this.width * this.height)) * 100) +
               " percent. Currently " +
