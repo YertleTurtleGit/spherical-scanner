@@ -10,15 +10,26 @@ class SphericalDataset {
     listenForAddImagesButtonClick(addImagesButton) {
         // TODO: Implement.
     }
-    getImagePointer() {
-        return this.imagePointer;
+    async getImageSet(cameraAzimuthalAngle, cameraPolarAngle) {
+        const imageSetThreadPool = new ThreadPool(new DOMStatusElement("Loading images."));
+        imageSetThreadPool.add(this.getImage.bind(this, cameraAzimuthalAngle, cameraPolarAngle, 270), this.getImage.bind(this, cameraAzimuthalAngle, cameraPolarAngle, 0), this.getImage.bind(this, cameraAzimuthalAngle, cameraPolarAngle, 90), this.getImage.bind(this, cameraAzimuthalAngle, cameraPolarAngle, 180), this.getImage.bind(this, cameraAzimuthalAngle, cameraPolarAngle, Infinity, Infinity), this.getImage.bind(this, cameraAzimuthalAngle, cameraPolarAngle, 0, 90));
+        const imageSet = await imageSetThreadPool.run();
+        return {
+            north: imageSet[0],
+            east: imageSet[1],
+            south: imageSet[2],
+            west: imageSet[3],
+            all: imageSet[4],
+            front: imageSet[5],
+        };
     }
-    getImage(cameraAzimuthalAngle, cameraPolarAngle, lightAzimuthalAngle) {
+    getImage(cameraAzimuthalAngle, cameraPolarAngle, lightAzimuthalAngle, lightPolarAngle = 90) {
         for (let i = 0, length = this.imagePointer.length; i < length; i++) {
             const imagePointer = this.imagePointer[i];
             if (imagePointer.cameraAzimuthalAngle === cameraAzimuthalAngle &&
                 imagePointer.cameraPolarAngle === cameraPolarAngle &&
-                imagePointer.lightAzimuthalAngle === lightAzimuthalAngle) {
+                imagePointer.lightAzimuthalAngle === lightAzimuthalAngle &&
+                imagePointer.lightPolarAngle === lightPolarAngle) {
                 const imagePath = imagePointer.path;
                 return new Promise((resolve) => {
                     const image = new Image();
@@ -41,13 +52,29 @@ class SphericalDataset {
     testButtonClicked() {
         for (let i = 0, length = this.testDatasetPaths.length; i < length; i++) {
             const imagePath = this.testDatasetPaths[i];
+            let lightAzimuthalAngle;
+            let lightPolarAngle = 90;
+            const lightAzimuthalAngleName = imagePath
+                .split("l-")[1]
+                .substring(0, 3);
+            if (lightAzimuthalAngleName === "all") {
+                lightAzimuthalAngle = Infinity;
+                lightPolarAngle = Infinity;
+            }
+            else if (lightAzimuthalAngleName === "front") {
+                lightAzimuthalAngle = 0;
+                lightPolarAngle = 0;
+            }
+            else {
+                lightAzimuthalAngle = Number(lightAzimuthalAngleName);
+            }
             const imagePointer = {
                 cameraAzimuthalAngle: Number(imagePath.split("ca-")[1].substring(0, 3)),
                 cameraPolarAngle: Number(imagePath.split("cp-")[1].substring(0, 3)),
-                lightAzimuthalAngle: Number(imagePath.split("la-")[1].substring(0, 3)),
+                lightAzimuthalAngle: lightAzimuthalAngle,
+                lightPolarAngle: lightPolarAngle,
                 path: imagePath,
             };
-            console.log(imagePointer);
             this.imagePointer.push(imagePointer);
         }
     }

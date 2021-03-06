@@ -4,6 +4,13 @@
    --brighter-color: rgba(96, 96, 96, 0.5);
    --text-color: rgba(255, 255, 255, 1);
    --text-color-darker: rgba(200, 200, 200, 1);
+   --accent-color: rgb(130, 197, 255);
+}
+
+* {
+   padding: 0;
+   margin: 0;
+   border: 0;
 }
 
 body {
@@ -57,26 +64,37 @@ progress {
    appearance: none;
 }
 
-#content-grid {
-   display: grid;
+#content {
    position: absolute;
    top: 0;
    left: 0;
    width: 100%;
    height: 100%;
-   grid-template-areas: "input-area    point-cloud-area    loading-area";
-   grid-template-columns: 10% 80% 10%;
-   grid-template-rows: 100%;
 }
 
 #input-area {
-   grid-area: input-area;
-   padding: 20px;
+   position: absolute;
+   background-color: transparent;
+   top: 0;
+   left: 0;
+   width: 20%;
+   height: 100%;
+   z-index: 2;
 }
 #point-cloud-area {
-   grid-area: point-cloud-area;
+   position: absolute;
+   top: 0;
+   left: 0;
+   width: 100%;
+   height: 100%;
+   z-index: 1;
 }
 #loading-area {
-   grid-area: loading-area;
-   padding: 20px;
+   position: absolute;
+   background-color: transparent;
+   top: 0;
+   right: 0;
+   width: 20%;
+   height: 100%;
+   z-index: 2;
 }

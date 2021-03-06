@@ -28,8 +28,8 @@ const LIGHTING_AZIMUTHAL_ANGLES = [
     SOUTH_EAST,
 ];
 class NormalMap {
-    constructor(dataset, calculationMethod) {
-        this.dataset = dataset;
+    constructor(imageSet, calculationMethod, polarAngle = 90) {
+        this.imageSet = imageSet;
         this.calculationMethod = calculationMethod;
         this.jsImageObject = null;
         this.pixelArray = null;
@@ -85,25 +85,20 @@ class NormalMap {
         return null;
     }
     async calculate() {
-        const dimensionReferenceImage = this.dataset.getImage(LIGHTING_AZIMUTHAL_ANGLES[0]);
+        const dimensionReferenceImage = this.imageSet.north;
         const width = dimensionReferenceImage.width;
         const height = dimensionReferenceImage.height;
         let normalMapShader = new Shader(width, height);
         normalMapShader.bind();
-        let images = [];
-        for (let i = 0; i < LIGHTING_AZIMUTHAL_ANGLES.length; i++) {
-            images.push(GlslImage.load(this.dataset.getImage(LIGHTING_AZIMUTHAL_ANGLES[i])));
-        }
-        const maxImage = images[0].maximum(...images);
+        const maxImage = GlslImage.load(this.imageSet.all);
         let all = maxImage.getLuminanceFloat();
-        let north = images[LIGHTING_AZIMUTHAL_ANGLES.indexOf(NORTH)].getLuminanceFloat();
-        let east = images[LIGHTING_AZIMUTHAL_ANGLES.indexOf(EAST)].getLuminanceFloat();
-        let south = images[LIGHTING_AZIMUTHAL_ANGLES.indexOf(SOUTH)].getLuminanceFloat();
-        let west = images[LIGHTING_AZIMUTHAL_ANGLES.indexOf(WEST)].getLuminanceFloat();
-        const noLightImage = this.dataset.getImage(null);
-        const hasNoLightImage = noLightImage !== null;
+        let north = GlslImage.load(this.imageSet.north).getLuminanceFloat();
+        let east = GlslImage.load(this.imageSet.east).getLuminanceFloat();
+        let south = GlslImage.load(this.imageSet.south).getLuminanceFloat();
+        let west = GlslImage.load(this.imageSet.west).getLuminanceFloat();
+        const noLightImage = this.imageSet.none;
         let noLight;
-        if (hasNoLightImage) {
+        if (noLightImage) {
             noLight = GlslImage.load(noLightImage).getLuminanceFloat();
             all = all.subtractFloat(noLight);
             north = north.subtractFloat(noLight);
@@ -117,19 +112,19 @@ class NormalMap {
         west = west.divideFloat(all);
         let result;
         if (this.calculationMethod === 0 /* RAPID_GRADIENT */) {
-            const minImage = images[0].minimum(...images);
-            let front = minImage.divideFloat(all).getLuminanceFloat();
-            if (hasNoLightImage) {
+            let front = GlslImage.load(this.imageSet.front).getLuminanceFloat();
+            if (noLightImage) {
                 front = front.subtractFloat(noLight);
             }
+            front = front.divideFloat(all);
             result = new GlslVector3([east, north, front]).getVector4();
         }
         if (this.calculationMethod === 1 /* PHOTOMETRIC_STEREO */) {
-            let northeast = images[LIGHTING_AZIMUTHAL_ANGLES.indexOf(NORTH_EAST)].getLuminanceFloat();
-            let southeast = images[LIGHTING_AZIMUTHAL_ANGLES.indexOf(SOUTH_EAST)].getLuminanceFloat();
-            let southwest = images[LIGHTING_AZIMUTHAL_ANGLES.indexOf(SOUTH_WEST)].getLuminanceFloat();
-            let northwest = images[LIGHTING_AZIMUTHAL_ANGLES.indexOf(NORTH_WEST)].getLuminanceFloat();
-            if (hasNoLightImage) {
+            let northeast = GlslImage.load(this.imageSet.northeast).getLuminanceFloat();
+            let southeast = GlslImage.load(this.imageSet.southeast).getLuminanceFloat();
+            let southwest = GlslImage.load(this.imageSet.southwest).getLuminanceFloat();
+            let northwest = GlslImage.load(this.imageSet.northwest).getLuminanceFloat();
+            if (noLightImage) {
                 northeast = north.subtractFloat(noLight);
                 southeast = north.subtractFloat(noLight);
                 southwest = north.subtractFloat(noLight);
@@ -227,8 +222,7 @@ class NormalMap {
         ]).inverse();
     }
     getLightDirectionVector(azimuthalAngle) {
-        let polarAngle = this.dataset.getPolarAngle(azimuthalAngle);
-        let glslPolar = new GlslFloat(polarAngle).radians();
+        let glslPolar = new GlslFloat(this.polarAngle).radians();
         let glslAzimuthal = new GlslFloat(azimuthalAngle).radians();
         let sinPolar = glslPolar.sin();
         let cosPolar = glslPolar.cos();

@@ -125,14 +125,16 @@ class PointCloudRenderer {
         window.addEventListener("resize", this.refreshViewportSize.bind(this));
     }
     refreshViewportSize() {
+        /* QUADRAT
         if (this.canvas.width > this.canvas.height) {
-            this.canvas.width = this.div.clientHeight;
-            this.canvas.height = this.div.clientHeight;
-        }
-        else {
-            this.canvas.width = this.div.clientWidth;
-            this.canvas.height = this.div.clientWidth;
-        }
+           this.canvas.width = this.div.clientHeight;
+           this.canvas.height = this.div.clientHeight;
+        } else {
+           this.canvas.width = this.div.clientWidth;
+           this.canvas.height = this.div.clientWidth;
+        }*/
+        this.canvas.width = this.div.clientWidth;
+        this.canvas.height = this.div.clientHeight;
         this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     }
     startRendering() {

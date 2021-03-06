@@ -15,6 +15,7 @@ POLAR_RESOLUTION = 20  # Light count for simulating rotation of 180 degrees.
 BRIGHTNESS_FACTOR = 0.5
 LIGHT_ORIGINS = [0, 90, 180, 270]
 ALL_LIGHT_IMAGE = True
+FRONT_LIGHT_IMAGE = True
 CAMERA_AZIMUTHAL_STEPS = 4
 CAMERA_POLAR_STEPS = CAMERA_AZIMUTHAL_STEPS / 2
 
@@ -337,7 +338,8 @@ class SphericalScannerPrototype:
             cameraPosition,
             lightOriginAzimuthalAngle,
             frame,
-            allLights=False):
+            allLights=False,
+            frontLight=False):
         self.__buildObjects()
 
         self.__setCameraPosition(cameraPosition)
@@ -364,6 +366,8 @@ class SphericalScannerPrototype:
 
             if(allLights):
                 lightBrightness = self.__getMaximumBrightness()
+            elif(frontLight):
+                lightBrightness = self.__getLightBrightness(lightPosition, -cameraPosition)
             else:
                 lightBrightness = self.__getLightBrightness(lightPosition,
                                                             lightOrigin)
@@ -379,6 +383,9 @@ class SphericalScannerPrototype:
         if(ALL_LIGHT_IMAGE):
             totalFrameCount += len(self.__getCameraPositions())
 
+        if(FRONT_LIGHT_IMAGE):
+            totalFrameCount += len(self.__getCameraPositions())
+
         for cameraPosition in self.__getCameraPositions():
             for lightOrigin in self.__lightOrigins:
                 frame += 1
@@ -390,6 +397,10 @@ class SphericalScannerPrototype:
                 frame += 1
                 self.__buildKeyframe(cameraPosition, None, frame, True)
 
+            if(FRONT_LIGHT_IMAGE):
+                frame += 1
+                self.__buildKeyframe(cameraPosition, 0, frame, False, True)
+
         print("Finished building keyframes.")
 
     def getFilenameFromFrame(self, frame):
@@ -400,13 +411,17 @@ class SphericalScannerPrototype:
         lightAzimuthalCount = len(self.__lightOrigins)
         if(ALL_LIGHT_IMAGE):
             lightAzimuthalCount += 1
+        if(FRONT_LIGHT_IMAGE):
+            lightAzimuthalCount += 1
 
         lightAzimuthalIndex = math.floor(frame / lightAzimuthalRepeat)
         while(lightAzimuthalIndex > lightAzimuthalCount - 1):
             lightAzimuthalIndex -= lightAzimuthalCount
 
-        if(ALL_LIGHT_IMAGE and lightAzimuthalIndex == lightAzimuthalCount - 1):
+        if(ALL_LIGHT_IMAGE and lightAzimuthalIndex == lightAzimuthalCount - 2):
             lightAzimuthalName = "all"
+        elif(FRONT_LIGHT_IMAGE and lightAzimuthalIndex == lightAzimuthalCount - 1):
+            lightAzimuthalName = "front"
         else:
             lightAzimuthalName = getThreeDigitString(self.__lightOriginsDegree[lightAzimuthalIndex])
 

@@ -6,6 +6,7 @@ class SphericalDataset {
       cameraAzimuthalAngle: number;
       cameraPolarAngle: number;
       lightAzimuthalAngle: number;
+      lightPolarAngle: number;
       path: string;
    }[] = [];
 
@@ -23,26 +24,60 @@ class SphericalDataset {
       // TODO: Implement.
    }
 
-   public getImagePointer(): {
-      cameraAzimuthalAngle: number;
-      cameraPolarAngle: number;
-      lightAzimuthalAngle: number;
-      path: string;
-   }[] {
-      return this.imagePointer;
+   public async getImageSet(
+      cameraAzimuthalAngle: number,
+      cameraPolarAngle: number
+   ): Promise<{
+      north: HTMLImageElement;
+      east: HTMLImageElement;
+      south: HTMLImageElement;
+      west: HTMLImageElement;
+      all: HTMLImageElement;
+      front: HTMLImageElement;
+   }> {
+      const imageSetThreadPool: ThreadPool = new ThreadPool(
+         new DOMStatusElement("Loading images.")
+      );
+
+      imageSetThreadPool.add(
+         this.getImage.bind(this, cameraAzimuthalAngle, cameraPolarAngle, 270),
+         this.getImage.bind(this, cameraAzimuthalAngle, cameraPolarAngle, 0),
+         this.getImage.bind(this, cameraAzimuthalAngle, cameraPolarAngle, 90),
+         this.getImage.bind(this, cameraAzimuthalAngle, cameraPolarAngle, 180),
+         this.getImage.bind(
+            this,
+            cameraAzimuthalAngle,
+            cameraPolarAngle,
+            Infinity,
+            Infinity
+         ),
+         this.getImage.bind(this, cameraAzimuthalAngle, cameraPolarAngle, 0, 90)
+      );
+
+      const imageSet: HTMLImageElement[] = await imageSetThreadPool.run();
+      return {
+         north: imageSet[0],
+         east: imageSet[1],
+         south: imageSet[2],
+         west: imageSet[3],
+         all: imageSet[4],
+         front: imageSet[5],
+      };
    }
 
-   public getImage(
+   private getImage(
       cameraAzimuthalAngle: number,
       cameraPolarAngle: number,
-      lightAzimuthalAngle: number
+      lightAzimuthalAngle: number,
+      lightPolarAngle: number = 90
    ): Promise<HTMLImageElement> {
       for (let i = 0, length = this.imagePointer.length; i < length; i++) {
          const imagePointer = this.imagePointer[i];
          if (
             imagePointer.cameraAzimuthalAngle === cameraAzimuthalAngle &&
             imagePointer.cameraPolarAngle === cameraPolarAngle &&
-            imagePointer.lightAzimuthalAngle === lightAzimuthalAngle
+            imagePointer.lightAzimuthalAngle === lightAzimuthalAngle &&
+            imagePointer.lightPolarAngle === lightPolarAngle
          ) {
             const imagePath: string = imagePointer.path;
             return new Promise((resolve) => {
@@ -70,23 +105,38 @@ class SphericalDataset {
       for (let i = 0, length = this.testDatasetPaths.length; i < length; i++) {
          const imagePath: string = this.testDatasetPaths[i];
 
+         let lightAzimuthalAngle: number;
+         let lightPolarAngle: number = 90;
+
+         const lightAzimuthalAngleName: string = imagePath
+            .split("l-")[1]
+            .substring(0, 3);
+
+         if (lightAzimuthalAngleName === "all") {
+            lightAzimuthalAngle = Infinity;
+            lightPolarAngle = Infinity;
+         } else if (lightAzimuthalAngleName === "front") {
+            lightAzimuthalAngle = 0;
+            lightPolarAngle = 0;
+         } else {
+            lightAzimuthalAngle = Number(lightAzimuthalAngleName);
+         }
+
          const imagePointer: {
             cameraAzimuthalAngle: number;
             cameraPolarAngle: number;
             lightAzimuthalAngle: number;
+            lightPolarAngle: number;
             path: string;
          } = {
             cameraAzimuthalAngle: Number(
                imagePath.split("ca-")[1].substring(0, 3)
             ),
             cameraPolarAngle: Number(imagePath.split("cp-")[1].substring(0, 3)),
-            lightAzimuthalAngle: Number(
-               imagePath.split("la-")[1].substring(0, 3)
-            ),
+            lightAzimuthalAngle: lightAzimuthalAngle,
+            lightPolarAngle: lightPolarAngle,
             path: imagePath,
          };
-
-         console.log(imagePointer);
 
          this.imagePointer.push(imagePointer);
       }
