@@ -17,30 +17,27 @@ async function startCalculation(): Promise<void> {
       front: HTMLImageElement;
    } = await dataset.getImageSet(0, 0);
 
-   const normalMap: NormalMap = new NormalMap(
-      imageSet,
-      NORMAL_CALCULATION_METHOD.RAPID_GRADIENT
-   );
-
-   await normalMap.calculate();
-
    const angleDistance: number = 1;
    const angles: number[] = new Array(360 / angleDistance);
 
-   let angleOffset: number = 0;
+   let angleOffset: number = 1;
    for (let i = 0; i < angles.length; i++) {
       angles[i] = angleOffset;
       angleOffset += angleDistance;
    }
 
+   const normalMap: NormalMap = new NormalMap(
+      imageSet,
+      NORMAL_CALCULATION_METHOD.RAPID_GRADIENT
+   );
+
    const pointCloud: PointCloud = new PointCloud(
       normalMap,
       imageSet.all.width,
       imageSet.all.height,
-      0.01,
+      0.05,
       25000,
-      angles,
-      normalMap.getAsPixelArray()
+      angles
    );
 
    await pointCloud.calculate();
@@ -51,9 +48,10 @@ async function startCalculation(): Promise<void> {
       false
    );
 
-   //setTimeout(pointCloudRenderer.startRendering.bind(pointCloudRenderer));
+   setTimeout(pointCloudRenderer.startRendering.bind(pointCloudRenderer));
+   //pointCloud.downloadObj("monkey", null);
 
-   POINT_CLOUD_AREA.appendChild(normalMap.getAsJsImageObject());
+   //POINT_CLOUD_AREA.appendChild(normalMap.getAsJsImageObject());
 }
 
 TEST_BUTTON.addEventListener("click", startCalculation);

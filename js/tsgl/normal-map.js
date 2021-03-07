@@ -31,65 +31,15 @@ class NormalMap {
     constructor(imageSet, calculationMethod, polarAngle = 90) {
         this.imageSet = imageSet;
         this.calculationMethod = calculationMethod;
-        this.jsImageObject = null;
-        this.pixelArray = null;
-        this.dataUrl = null;
+        this.dimensions = {
+            width: imageSet.north.width,
+            height: imageSet.north.height,
+        };
     }
-    static getFromJsImageObject(jsImageObject) {
-        const normalMap = new NormalMap(null, null);
-        normalMap.jsImageObject = jsImageObject;
-        const shader = new Shader(jsImageObject.width, jsImageObject.height);
-        shader.bind();
-        const render = GlslRendering.render(GlslImage.load(jsImageObject));
-        normalMap.pixelArray = render.getPixelArray();
-        normalMap.dataUrl = render.getDataUrl();
-        shader.purge();
-        return normalMap;
+    getDimensions() {
+        return this.dimensions;
     }
-    downloadAsImage(fileName, button) {
-        button.style.display = "none";
-        const cThis = this;
-        setTimeout(() => {
-            fileName += ".png";
-            let element = document.createElement("a");
-            element.setAttribute("href", cThis.getAsDataUrl());
-            element.setAttribute("download", fileName);
-            element.style.display = "none";
-            document.body.appendChild(element);
-            element.click();
-            document.body.removeChild(element);
-            setTimeout(() => {
-                button.style.display = "inherit";
-            }, 500);
-        });
-    }
-    getAsDataUrl() {
-        if (this.dataUrl !== null) {
-            return this.dataUrl;
-        }
-        console.warn("Call calculate first.");
-        return null;
-    }
-    getAsPixelArray() {
-        if (this.pixelArray !== null) {
-            return this.pixelArray;
-        }
-        console.warn("Call calculate first.");
-        return null;
-    }
-    getAsJsImageObject() {
-        if (this.jsImageObject !== null) {
-            return this.jsImageObject;
-        }
-        console.warn("Call calculate first.");
-        return null;
-    }
-    async calculate() {
-        const dimensionReferenceImage = this.imageSet.north;
-        const width = dimensionReferenceImage.width;
-        const height = dimensionReferenceImage.height;
-        let normalMapShader = new Shader(width, height);
-        normalMapShader.bind();
+    calculatePhotometricStereo() {
         const maxImage = GlslImage.load(this.imageSet.all);
         let all = maxImage.getLuminanceFloat();
         let north = GlslImage.load(this.imageSet.north).getLuminanceFloat();
@@ -177,11 +127,47 @@ class NormalMap {
                 normalVector.channel(2 /* BLUE */),
             ]).getVector4();
         }
+    }
+    calculateRapidGradient() {
+        const all = GlslImage.load(this.imageSet.all).getLuminanceFloat();
+        const north = GlslImage.load(this.imageSet.north)
+            .getLuminanceFloat()
+            .divideFloat(all);
+        const east = GlslImage.load(this.imageSet.east)
+            .getLuminanceFloat()
+            .divideFloat(all);
+        const south = GlslImage.load(this.imageSet.south)
+            .getLuminanceFloat()
+            .divideFloat(all);
+        const west = GlslImage.load(this.imageSet.west)
+            .getLuminanceFloat()
+            .divideFloat(all);
+        const front = GlslImage.load(this.imageSet.front)
+            .divideFloat(all)
+            .getLuminanceFloat();
+        let x = east.subtractFloat(west);
+        let y = north.subtractFloat(south);
+        x = x.addFloat(new GlslFloat(1));
+        y = y.addFloat(new GlslFloat(1));
+        x = x.divideFloat(new GlslFloat(2));
+        y = y.divideFloat(new GlslFloat(2));
+        return new GlslVector3([x, y, front]);
+    }
+    getGlslNormal() {
+        if (this.calculationMethod === 0 /* RAPID_GRADIENT */) {
+            return this.calculateRapidGradient();
+        }
+        if (this.calculationMethod === 1 /* PHOTOMETRIC_STEREO */) {
+            return this.calculatePhotometricStereo();
+        }
+    }
+    render() {
+        const normalMapShader = new Shader(this.dimensions);
+        normalMapShader.bind();
+        const result = this.getGlslNormal().getVector4();
         const rendering = GlslRendering.render(result);
-        this.pixelArray = rendering.getPixelArray();
-        this.dataUrl = rendering.getDataUrl();
-        this.jsImageObject = await rendering.getJsImage();
         normalMapShader.purge();
+        return rendering;
     }
     getAnisotropicNormalVector(imageLuminances, originAzimuthalAngle, orthogonalAzimuthalAngle, oppositeAzimuthalAngle) {
         const lights = this.getLights(originAzimuthalAngle, orthogonalAzimuthalAngle, oppositeAzimuthalAngle);

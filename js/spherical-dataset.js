@@ -12,7 +12,7 @@ class SphericalDataset {
     }
     async getImageSet(cameraAzimuthalAngle, cameraPolarAngle) {
         const imageSetThreadPool = new ThreadPool(new DOMStatusElement("Loading images."));
-        imageSetThreadPool.add(this.getImage.bind(this, cameraAzimuthalAngle, cameraPolarAngle, 270), this.getImage.bind(this, cameraAzimuthalAngle, cameraPolarAngle, 0), this.getImage.bind(this, cameraAzimuthalAngle, cameraPolarAngle, 90), this.getImage.bind(this, cameraAzimuthalAngle, cameraPolarAngle, 180), this.getImage.bind(this, cameraAzimuthalAngle, cameraPolarAngle, Infinity, Infinity), this.getImage.bind(this, cameraAzimuthalAngle, cameraPolarAngle, 0, 90));
+        imageSetThreadPool.add(this.getImage.bind(this, cameraAzimuthalAngle, cameraPolarAngle, 270), this.getImage.bind(this, cameraAzimuthalAngle, cameraPolarAngle, 0), this.getImage.bind(this, cameraAzimuthalAngle, cameraPolarAngle, 90), this.getImage.bind(this, cameraAzimuthalAngle, cameraPolarAngle, 180), this.getImage.bind(this, cameraAzimuthalAngle, cameraPolarAngle, Infinity, Infinity), this.getImage.bind(this, cameraAzimuthalAngle, cameraPolarAngle, 0, 0));
         const imageSet = await imageSetThreadPool.run();
         return {
             north: imageSet[0],
@@ -60,8 +60,9 @@ class SphericalDataset {
             if (lightAzimuthalAngleName === "all") {
                 lightAzimuthalAngle = Infinity;
                 lightPolarAngle = Infinity;
+                //TODO: Fix fro to front
             }
-            else if (lightAzimuthalAngleName === "front") {
+            else if (lightAzimuthalAngleName === "fro") {
                 lightAzimuthalAngle = 0;
                 lightPolarAngle = 0;
             }

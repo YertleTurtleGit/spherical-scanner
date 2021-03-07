@@ -2,7 +2,7 @@
 const DEGREE_TO_RADIAN_FACTOR = Math.PI / 180;
 const SLOPE_SHIFT = -(255 / 2);
 class PointCloud {
-    constructor(normalMap, width, height, depthFactor, maxVertexCount, azimuthalAngles, vertexAlbedoColors) {
+    constructor(normalMap, width, height, depthFactor, maxVertexCount, azimuthalAngles, vertexAlbedoColors = new Uint8Array(new Array(width * height * 4).fill(255))) {
         this.gpuVertexErrorColors = [];
         this.normalMap = normalMap;
         this.depthFactor = depthFactor;
@@ -21,8 +21,10 @@ class PointCloud {
     getAzimuthalAngles() {
         return this.azimuthalAngles;
     }
-    downloadObj(filename, vertexColorArray, button) {
-        button.style.display = "none";
+    downloadObj(filename, button) {
+        if (button) {
+            button.style.display = "none";
+        }
         const cThis = this;
         setTimeout(() => {
             filename += ".obj";
@@ -38,9 +40,11 @@ class PointCloud {
             element.click();
             window.URL.revokeObjectURL(url);
             element.remove();
-            setTimeout(() => {
-                button.style.display = "inherit";
-            }, 500);
+            if (button) {
+                setTimeout(() => {
+                    button.style.display = "inherit";
+                }, 500);
+            }
         });
     }
     getEdgeFramePixels() {
@@ -122,17 +126,22 @@ class PointCloud {
         return pixelLines;
     }
     isPixelMaskedOut(pixelIndex) {
-        let normal = {
-            red: this.normalMap.getAsPixelArray()[pixelIndex + 0 /* RED */],
-            green: this.normalMap.getAsPixelArray()[pixelIndex + 1 /* GREEN */],
-            blue: this.normalMap.getAsPixelArray()[pixelIndex + 2 /* BLUE */],
+        /*let normal: { red: number; green: number; blue: number } = {
+           red: this.normalMap.getAsPixelArray()[pixelIndex + GLSL_CHANNEL.RED],
+           green: this.normalMap.getAsPixelArray()[
+              pixelIndex + GLSL_CHANNEL.GREEN
+           ],
+           blue: this.normalMap.getAsPixelArray()[pixelIndex + GLSL_CHANNEL.BLUE],
         };
-        if (normal.red + normal.blue + normal.green === 0 ||
-            normal.red === 255 ||
-            normal.green === 255 ||
-            normal.blue === 255) {
-            return true;
-        }
+  
+        if (
+           normal.red + normal.blue + normal.green < 50 ||
+           normal.red >= 220 ||
+           normal.green >= 220 ||
+           normal.blue >= 220
+        ) {
+           return true;
+        }*/
         return false;
     }
     getPixelSlope(pixel, stepVector, gradientPixelArray) {
@@ -144,22 +153,39 @@ class PointCloud {
         const topSlope = gradientPixelArray[index + 1 /* GREEN */] + SLOPE_SHIFT;
         return stepVector.x * rightSlope + stepVector.y * topSlope;
     }
-    getLocalGradientFactor() {
-        const normalMapImage = this.normalMap.getAsJsImageObject();
-        const width = normalMapImage.width;
-        const height = normalMapImage.height;
-        let pointCloudShader = new Shader(width, height);
+    async getLocalGradientFactor() {
+        let pointCloudShader = new Shader(this.normalMap.getDimensions());
         pointCloudShader.bind();
-        const glslNormalMap = GlslImage.load(normalMapImage);
-        const red = glslNormalMap.channel(0 /* RED */);
-        const green = glslNormalMap.channel(1 /* GREEN */);
-        const blue = glslNormalMap.channel(2 /* BLUE */);
-        const result = new GlslVector3([
-            red.divideFloat(blue),
-            green.divideFloat(blue),
-            blue,
+        const normal = this.normalMap.getGlslNormal();
+        const rightNormal = new GlslVector3([
+            new GlslFloat(1),
+            new GlslFloat(0),
+            new GlslFloat(0),
         ]);
-        const gradientPixelArray = GlslRendering.render(result.getVector4()).getPixelArray();
+        const topNormal = new GlslVector3([
+            new GlslFloat(0),
+            new GlslFloat(1),
+            new GlslFloat(0),
+        ]);
+        const frontNormal = new GlslVector3([
+            new GlslFloat(0),
+            new GlslFloat(0),
+            new GlslFloat(1),
+        ]);
+        const frontSlope = new GlslFloat(1).subtractFloat(normal.dot(frontNormal));
+        const result = new GlslVector3([
+            normal.dot(rightNormal),
+            normal.dot(topNormal),
+            new GlslFloat(0),
+        ]);
+        /*const result = new GlslVector3([
+           normal.channel(GLSL_CHANNEL.BLUE),
+           normal.channel(GLSL_CHANNEL.BLUE),
+           normal.channel(GLSL_CHANNEL.BLUE),
+        ]);*/
+        const rendering = GlslRendering.render(result.getVector4());
+        const gradientPixelArray = rendering.getPixelArray();
+        LOADING_AREA.appendChild(await rendering.getJsImage());
         pointCloudShader.purge();
         return gradientPixelArray;
     }
@@ -278,7 +304,11 @@ class PointCloud {
         this.gpuVertices = new Array(dimensionThreeChannel);
         this.gpuVertexAlbedoColors = new Array(dimensionThreeChannel);
         this.gpuVertexNormalColors = new Array(dimensionThreeChannel);
-        const normalMapPixelArray = this.normalMap.getAsPixelArray();
+        //TODO: Make performant.
+        /*const normalMapPixelArray: Uint8Array = this.normalMap
+           .render()
+           .getPixelArray();*/
+        const normalMapPixelArray = new Uint8Array(new Array(this.width * this.height * 4).fill(255));
         const summerizeThreadPool = new ThreadPool(summarizeDOMStatus);
         for (let y = 0; y < this.height; y += samplingRateStep.y) {
             const summerizeMethod = this.summarizeHorizontalImageLine.bind(this, y, samplingRateStep.x, resolution, normalMapPixelArray);

@@ -51,7 +51,7 @@ class SphericalDataset {
             Infinity,
             Infinity
          ),
-         this.getImage.bind(this, cameraAzimuthalAngle, cameraPolarAngle, 0, 90)
+         this.getImage.bind(this, cameraAzimuthalAngle, cameraPolarAngle, 0, 0)
       );
 
       const imageSet: HTMLImageElement[] = await imageSetThreadPool.run();
@@ -115,7 +115,8 @@ class SphericalDataset {
          if (lightAzimuthalAngleName === "all") {
             lightAzimuthalAngle = Infinity;
             lightPolarAngle = Infinity;
-         } else if (lightAzimuthalAngleName === "front") {
+            //TODO: Fix fro to front
+         } else if (lightAzimuthalAngleName === "fro") {
             lightAzimuthalAngle = 0;
             lightPolarAngle = 0;
          } else {
