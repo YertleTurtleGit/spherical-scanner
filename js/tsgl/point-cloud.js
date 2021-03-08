@@ -2,15 +2,19 @@
 const DEGREE_TO_RADIAN_FACTOR = Math.PI / 180;
 const SLOPE_SHIFT = -(255 / 2);
 class PointCloud {
-    constructor(normalMap, width, height, depthFactor, maxVertexCount, azimuthalAngles, vertexAlbedoColors = new Uint8Array(new Array(width * height * 4).fill(255))) {
-        this.gpuVertexErrorColors = [];
+    constructor(normalMap, width, height, depthFactor, maxVertexCount, azimuthalAngles, rotation = {
+        azimuthal: 0,
+        polar: 0,
+    }, mask = new Uint8Array(new Array(width * height * 4).fill(255))) {
         this.normalMap = normalMap;
         this.depthFactor = depthFactor;
         this.width = width;
         this.height = height;
         this.maxVertexCount = maxVertexCount;
         this.azimuthalAngles = azimuthalAngles;
-        this.vertexAlbedoColors = vertexAlbedoColors;
+        this.rotation = rotation;
+        this.mask = mask;
+        this.calculateIndexMaps();
     }
     getWidth() {
         return this.width;
@@ -47,15 +51,74 @@ class PointCloud {
             }
         });
     }
-    calculateMask() {
-        this.mask = new Array(this.width * this.height).fill(true);
-        let offset = 0;
+    getRotatedVertex(vertex) {
+        const dotVec3 = (vector1, vector2) => {
+            let result = 0;
+            for (let i = 0; i < 3; i++) {
+                result += vector1[i] * vector2[i];
+            }
+            return result;
+        };
+        const rotateAround = (vector, axis, angleDegree) => {
+            const angle = angleDegree * DEGREE_TO_RADIAN_FACTOR;
+            const axisDivisor = Math.sqrt(dotVec3(axis, axis));
+            axis = [
+                axis[0] / axisDivisor,
+                axis[1] / axisDivisor,
+                axis[2] / axisDivisor,
+            ];
+            const a = Math.cos(angle / 2.0);
+            const b = -axis[0] * Math.sin(angle / 2.0);
+            const c = -axis[1] * Math.sin(angle / 2.0);
+            const d = -axis[2] * Math.sin(angle / 2.0);
+            const aa = a * a;
+            const bb = b * b;
+            const cc = c * c;
+            const dd = d * d;
+            const bc = b * c;
+            const ad = a * d;
+            const ac = a * c;
+            const ab = a * b;
+            const bd = b * d;
+            const cd = c * d;
+            const rotationMatrix = [
+                [aa + bb - cc - dd, 2 * (bc + ad), 2 * (bd - ac)],
+                [2 * (bc - ad), aa + cc - bb - dd, 2 * (cd + ab)],
+                [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc],
+            ];
+            /*const rotationMatrix: number[][] = [
+               [aa + bb - cc - dd, 2 * (bc - ad), 2 * (bd + ac)],
+               [2 * (bc + ad), aa + cc - bb - dd, 2 * (cd - ab)],
+               [2 * (bd - ac), 2 * (cd + ab), aa + dd - bb - cc],
+            ];*/
+            return [
+                dotVec3(vector, rotationMatrix[0]),
+                dotVec3(vector, rotationMatrix[1]),
+                dotVec3(vector, rotationMatrix[2]),
+            ];
+        };
+        let polar = this.rotation.polar;
+        let azimuthal = this.rotation.azimuthal;
+        //polar -= 90;
+        return rotateAround(rotateAround(vertex, [0, 1, 0], polar), [0, 0, 1], azimuthal);
+    }
+    getVertexIndex(pixelIndex) {
+        return this.pixelToVertexIndexMap[pixelIndex];
+    }
+    calculateIndexMaps() {
+        this.pixelToVertexIndexMap = new Array(this.width * this.height);
+        this.vertexToPixelIndexMap = [];
+        let vertexIndex = 0;
         for (let y = 0; y < this.height; y++) {
             for (let x = 0; x < this.width; x++) {
                 const index = x + y * this.width;
                 if (this.isPixelMaskedOut(index)) {
-                    this.mask[index] = false;
-                    offset++;
+                    this.pixelToVertexIndexMap[index] = null;
+                }
+                else {
+                    this.pixelToVertexIndexMap[index] = vertexIndex;
+                    this.vertexToPixelIndexMap.push(index);
+                    vertexIndex++;
                 }
             }
         }
@@ -139,26 +202,20 @@ class PointCloud {
         return pixelLines;
     }
     isPixelMaskedOut(pixelIndex) {
-        let normal = {
-            red: this.normalMapPixelArray[pixelIndex + 0 /* RED */],
-            green: this.normalMapPixelArray[pixelIndex + 1 /* GREEN */],
-            blue: this.normalMapPixelArray[pixelIndex + 2 /* BLUE */],
-        };
-        if (normal.red + normal.blue + normal.green === 0 ||
-            normal.red === 255 ||
-            normal.green === 255 ||
-            normal.blue === 255) {
-            return true;
-        }
-        return false;
+        pixelIndex *= 4;
+        return (this.mask[pixelIndex + 0 /* RED */] +
+            this.mask[pixelIndex + 1 /* GREEN */] +
+            this.mask[pixelIndex + 2 /* BLUE */] ===
+            0);
     }
     getPixelSlope(pixel, stepVector, gradientPixelArray) {
-        const index = (pixel.x + pixel.y * this.width) * 4;
+        const index = pixel.x + pixel.y * this.width;
         if (this.isPixelMaskedOut(index)) {
-            return undefined;
+            return null;
         }
-        const rightSlope = gradientPixelArray[index + 0 /* RED */] + SLOPE_SHIFT;
-        const topSlope = gradientPixelArray[index + 1 /* GREEN */] + SLOPE_SHIFT;
+        const colorIndex = index * 4;
+        const rightSlope = gradientPixelArray[colorIndex + 0 /* RED */] + SLOPE_SHIFT;
+        const topSlope = gradientPixelArray[colorIndex + 1 /* GREEN */] + SLOPE_SHIFT;
         return stepVector.x * rightSlope + stepVector.y * topSlope;
     }
     async getLocalGradientFactor() {
@@ -193,7 +250,6 @@ class PointCloud {
         ]);*/
         const rendering = GlslRendering.render(result.getVector4());
         const gradientPixelArray = rendering.getPixelArray();
-        LOADING_AREA.appendChild(await rendering.getJsImage());
         pointCloudShader.purge();
         return gradientPixelArray;
     }
@@ -212,70 +268,52 @@ class PointCloud {
             let lineOffset = 0;
             for (let k = 0; k < pixelLines[j].length; k++) {
                 const index = pixelLines[j][k].x + pixelLines[j][k].y * this.width;
-                integral[index] = lineOffset;
                 if (pixelLines[j][k].slope) {
+                    integral[index] = lineOffset;
                     lineOffset += pixelLines[j][k].slope * -this.depthFactor;
                 }
                 else {
+                    integral[index] = null;
                     lineOffset = 0;
                 }
             }
         }
         return integral;
     }
-    summarizeHorizontalImageLine(y, samplingRateStepX, resolution, normalMapPixelArray) {
+    summarizeHorizontalImageLine(y, samplingRateStepX, resolution) {
         const result = { averageError: 0, highestError: 0, zErrors: new Array(this.width) };
         for (let x = 0; x < this.width; x += samplingRateStepX) {
             const index = x + y * this.width;
-            const vectorIndex = index * 3;
-            const colorIndex = index * 4;
-            let zAverage = 0;
-            let zError = 0;
-            let averageDivisor = this.integrals.length;
-            for (let i = 0; i < this.integrals.length; i++) {
-                const currentZ = this.integrals[i][index];
-                if (!isNaN(currentZ)) {
-                    zAverage += currentZ;
-                    if (i !== 0) {
-                        zError += Math.abs(this.integrals[0][index] - currentZ);
+            let vectorIndex = this.getVertexIndex(index);
+            if (vectorIndex) {
+                vectorIndex *= 3;
+                let zAverage = 0;
+                let zError = 0;
+                let averageDivisor = this.integrals.length;
+                for (let i = 0; i < this.integrals.length; i++) {
+                    const currentZ = this.integrals[i][index];
+                    if (!isNaN(currentZ)) {
+                        zAverage += currentZ;
+                        if (i !== 0) {
+                            zError += Math.abs(this.integrals[0][index] - currentZ);
+                        }
                     }
                 }
+                zAverage /= averageDivisor;
+                zError /= averageDivisor;
+                result.averageError += zError / resolution;
+                result.highestError = Math.max(result.highestError, zError);
+                result.zErrors[x] = zError;
+                const gpuVertex = this.getRotatedVertex([
+                    x / this.width - 0.5,
+                    y / this.width - 0.5,
+                    zAverage / this.width,
+                ]);
+                this.gpuVertices[vectorIndex + 0 /* X */] = gpuVertex[0];
+                this.gpuVertices[vectorIndex + 1 /* Y */] = gpuVertex[1];
+                this.gpuVertices[vectorIndex + 2 /* Z */] = gpuVertex[2];
+                this.objString += "v " + x + " " + y + " " + zAverage + "\n";
             }
-            zAverage /= averageDivisor;
-            zError /= averageDivisor;
-            result.averageError += zError / resolution;
-            result.highestError = Math.max(result.highestError, zError);
-            result.zErrors[x] = zError;
-            this.gpuVertices[vectorIndex + 0 /* X */] = x / this.width - 0.5;
-            this.gpuVertices[vectorIndex + 1 /* Y */] = y / this.width - 0.5;
-            this.gpuVertices[vectorIndex + 2 /* Z */] =
-                zAverage / this.width - 0.5;
-            const red = this.vertexAlbedoColors[colorIndex + 0 /* RED */] / 255;
-            const green = this.vertexAlbedoColors[colorIndex + 1 /* GREEN */] / 255;
-            const blue = this.vertexAlbedoColors[colorIndex + 2 /* BLUE */] / 255;
-            this.gpuVertexAlbedoColors[vectorIndex + 0 /* RED */] = red;
-            this.gpuVertexAlbedoColors[vectorIndex + 1 /* GREEN */] = green;
-            this.gpuVertexAlbedoColors[vectorIndex + 2 /* BLUE */] = blue;
-            const normalRed = normalMapPixelArray[colorIndex + 0 /* RED */] / 255;
-            const normalGreen = normalMapPixelArray[colorIndex + 1 /* GREEN */] / 255;
-            const normalBlue = normalMapPixelArray[colorIndex + 2 /* BLUE */] / 255;
-            this.gpuVertexNormalColors[vectorIndex + 0 /* RED */] = normalRed;
-            this.gpuVertexNormalColors[vectorIndex + 1 /* GREEN */] = normalGreen;
-            this.gpuVertexNormalColors[vectorIndex + 2 /* BLUE */] = normalBlue;
-            this.objString +=
-                "v " +
-                    x +
-                    " " +
-                    y +
-                    " " +
-                    zAverage +
-                    " " +
-                    red +
-                    " " +
-                    green +
-                    " " +
-                    blue +
-                    "\n";
         }
         return result;
     }
@@ -306,20 +344,11 @@ class PointCloud {
               (this.height / samplingRateStep.y);
         }
         */
-        const dimensionSingleChannel = this.width * this.height;
-        const dimensionThreeChannel = dimensionSingleChannel * 3;
-        const zErrors = new Array(dimensionSingleChannel);
-        this.gpuVertices = new Array(dimensionThreeChannel);
-        this.gpuVertexAlbedoColors = new Array(dimensionThreeChannel);
-        this.gpuVertexNormalColors = new Array(dimensionThreeChannel);
-        //TODO: Make performant.
-        /*const normalMapPixelArray: Uint8Array = this.normalMap
-           .render()
-           .getPixelArray();*/
-        const normalMapPixelArray = new Uint8Array(new Array(this.width * this.height * 4).fill(255));
+        const zErrors = new Array(this.vertexToPixelIndexMap.length);
+        this.gpuVertices = new Array(this.vertexToPixelIndexMap.length * 3);
         const summerizeThreadPool = new ThreadPool(summarizeDOMStatus);
         for (let y = 0; y < this.height; y += samplingRateStep.y) {
-            const summerizeMethod = this.summarizeHorizontalImageLine.bind(this, y, samplingRateStep.x, resolution, normalMapPixelArray);
+            const summerizeMethod = this.summarizeHorizontalImageLine.bind(this, y, samplingRateStep.x, resolution);
             summerizeThreadPool.add(summerizeMethod);
         }
         const results = await summerizeThreadPool.run();
@@ -332,7 +361,6 @@ class PointCloud {
         for (let j = 0, length = results.length; j < length; j++) {
             const zErrorsLine = results[j].zErrors;
             for (let i = 0, length = zErrorsLine.length; i < length; i++) {
-                this.gpuVertexErrorColors.push(zErrorsLine[i] / highestError, 1 - zErrorsLine[i] / highestError, 0);
                 zErrors.push(zErrorsLine[i]);
             }
         }
@@ -353,14 +381,5 @@ class PointCloud {
     }
     getGpuVertices() {
         return this.gpuVertices;
-    }
-    getGpuVertexAlbedoColors() {
-        return this.gpuVertexAlbedoColors;
-    }
-    getGpuVertexNormalColors() {
-        return this.gpuVertexNormalColors;
-    }
-    getGpuVertexErrorColors() {
-        return this.gpuVertexErrorColors;
     }
 }

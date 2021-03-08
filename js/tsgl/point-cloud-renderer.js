@@ -1,32 +1,19 @@
 "use strict";
 class PointCloudRenderer {
-    constructor(pointCloud, div, verticalOrientation) {
+    constructor(vertices, div, verticalOrientation = false) {
         this.vertexSize = 2;
         this.rotationSpeed = 0.001;
         this.rotation = 0;
         this.deltaTime = 0;
         this.then = 0;
-        this.pointCloud = pointCloud;
+        this.vertices = vertices;
         this.div = div;
         this.verticalOrientation = verticalOrientation;
-        this.vertexCount = this.pointCloud.getGpuVertices().length / 3;
+        this.vertexCount = vertices.length / 3;
     }
     updateVertexColor(newColor) {
         let colors;
-        switch (newColor) {
-            case "albedo" /* ALBEDO */: {
-                colors = this.pointCloud.getGpuVertexAlbedoColors();
-                break;
-            }
-            case "normal_mapping" /* NORMAL_MAPPING */: {
-                colors = this.pointCloud.getGpuVertexNormalColors();
-                break;
-            }
-            case "error-proneness" /* ERROR_PRONENESS */: {
-                colors = this.pointCloud.getGpuVertexErrorColors();
-                break;
-            }
-        }
+        // TODO: Set color.
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexColorBuffer);
         this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(colors), this.gl.STATIC_DRAW);
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null);
@@ -36,8 +23,8 @@ class PointCloudRenderer {
         this.canvas.style.transition = "all 1s";
         this.div.appendChild(this.canvas);
         this.gl = this.canvas.getContext("webgl2");
-        let vertices = this.pointCloud.getGpuVertices();
-        let colors = this.pointCloud.getGpuVertexAlbedoColors();
+        let vertices = this.vertices;
+        let colors = new Array(vertices.length).fill(1);
         let vertex_buffer = this.gl.createBuffer();
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, vertex_buffer);
         this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(vertices), this.gl.STATIC_DRAW);
@@ -82,7 +69,7 @@ class PointCloudRenderer {
             " xRot[1] = vec3(0.0, cosRotX, -sinRotX);",
             " xRot[2] = vec3(0.0, sinRotX, cosRotX);",
             " vec3 pos = coordinates * xRot * yRot;",
-            " gl_Position = vec4(pos.x *2.0, (pos.y + 0.5) *2.0, pos.z *2.0, 1.0);",
+            " gl_Position = vec4(coordinates * yRot, 1.0);",
             " gl_PointSize = " +
                 GlslFloat.getJsNumberAsString(this.vertexSize) +
                 ";",
