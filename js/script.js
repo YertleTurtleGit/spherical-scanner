@@ -15,7 +15,7 @@ async function startCalculation() {
     const normalMap = new NormalMap(imageSet, 0 /* RAPID_GRADIENT */);
     const pointCloud = new PointCloud(normalMap, imageSet.all.width, imageSet.all.height, 0.05, 25000, angles);
     await pointCloud.calculate();
-    const pointCloudRenderer = new PointCloudRenderer(pointCloud, POINT_CLOUD_AREA, false);
+    const pointCloudRenderer = new PointCloudRenderer(pointCloud, POINT_CLOUD_AREA, true);
     setTimeout(pointCloudRenderer.startRendering.bind(pointCloudRenderer));
     //pointCloud.downloadObj("monkey", null);
     //POINT_CLOUD_AREA.appendChild(normalMap.getAsJsImageObject());

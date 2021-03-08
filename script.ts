@@ -45,7 +45,7 @@ async function startCalculation(): Promise<void> {
    const pointCloudRenderer = new PointCloudRenderer(
       pointCloud,
       POINT_CLOUD_AREA,
-      false
+      true
    );
 
    setTimeout(pointCloudRenderer.startRendering.bind(pointCloudRenderer));
