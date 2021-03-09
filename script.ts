@@ -9,8 +9,9 @@ async function startCalculation(): Promise<void> {
    INPUT_AREA.style.display = "none";
 
    const rotations: { azimuthal: number; polar: number }[] = [
-      { azimuthal: 0, polar: 0 },
-      { azimuthal: 360, polar: 360 },
+      { azimuthal: 0, polar: 0 }, // front
+      { azimuthal: 90, polar: 90 }, //top
+      //{ azimuthal: 0, polar: 90 }, // right
    ];
    const pointCloudThreadPool: ThreadPool = new ThreadPool(
       new DOMStatusElement("Calculating point cloud.")
@@ -71,7 +72,7 @@ async function getPointCloud(
       0.05,
       25000,
       angles,
-      rotation,
+      { azimuthal: rotation.azimuthal, polar: rotation.polar },
       mask
    );
 

@@ -61,6 +61,9 @@ class PointCloud {
         };
         const rotateAround = (vector, axis, angleDegree) => {
             const angle = angleDegree * DEGREE_TO_RADIAN_FACTOR;
+            if (angle === 0) {
+                return vertex;
+            }
             const axisDivisor = Math.sqrt(dotVec3(axis, axis));
             axis = [
                 axis[0] / axisDivisor,
@@ -97,10 +100,18 @@ class PointCloud {
                 dotVec3(vector, rotationMatrix[2]),
             ];
         };
-        let polar = this.rotation.polar;
-        let azimuthal = this.rotation.azimuthal;
-        //polar -= 90;
-        return rotateAround(rotateAround(vertex, [0, 1, 0], polar), [0, 0, 1], azimuthal);
+        const polar = this.rotation.polar;
+        const azimuthal = this.rotation.azimuthal;
+        const polarRad = polar * DEGREE_TO_RADIAN_FACTOR;
+        const azimuthalRad = azimuthal * DEGREE_TO_RADIAN_FACTOR;
+        const polarAxis = rotateAround([
+            Math.cos(azimuthalRad) * Math.sin(polarRad),
+            Math.sin(azimuthalRad) * Math.sin(polarRad),
+            0,
+        ], [0, 0, 1], 90);
+        const azimuthalRotated = rotateAround(vertex, [0, 0, 1], azimuthal);
+        const polarAzimuthalRotated = rotateAround(azimuthalRotated, polarAxis, polar);
+        return rotateAround(polarAzimuthalRotated, [0, 1, 0], -azimuthal);
     }
     getVertexIndex(pixelIndex) {
         return this.pixelToVertexIndexMap[pixelIndex];

@@ -6,7 +6,7 @@ async function startCalculation() {
     INPUT_AREA.style.display = "none";
     const rotations = [
         { azimuthal: 0, polar: 0 },
-        { azimuthal: 360, polar: 360 },
+        { azimuthal: 90, polar: 90 },
     ];
     const pointCloudThreadPool = new ThreadPool(new DOMStatusElement("Calculating point cloud."));
     for (let i = 0, length = rotations.length; i < length; i++) {
@@ -34,7 +34,7 @@ async function getPointCloud(dataset, rotation) {
     }
     const normalMap = new NormalMap(imageSet, 0 /* RAPID_GRADIENT */);
     const mask = getMask(imageSet);
-    const pointCloud = new PointCloud(normalMap, imageSet.all.width, imageSet.all.height, 0.05, 25000, angles, rotation, mask);
+    const pointCloud = new PointCloud(normalMap, imageSet.all.width, imageSet.all.height, 0.05, 25000, angles, { azimuthal: rotation.azimuthal, polar: rotation.polar }, mask);
     await pointCloud.calculate();
     return pointCloud;
 }
