@@ -24,12 +24,13 @@ class DOMStatusElement {
     setFinish() {
         this.progressDOM.value = 100;
         const divToRemove = this.divDOM;
-        divToRemove.style.transition = "all 0.5s";
-        divToRemove.style.transform += "translateY(-50%)";
+        divToRemove.parentElement.style.overflow = "hidden";
+        divToRemove.style.transition = "all 1s";
+        divToRemove.style.transform += "translateX(25%)";
         divToRemove.style.opacity = "0";
         setTimeout(() => {
             divToRemove.remove();
-        }, 250);
+        }, 1000);
     }
     createDOM() {
         if (DOMStatusElement.parentDiv) {
