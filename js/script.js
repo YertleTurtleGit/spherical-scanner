@@ -6,8 +6,7 @@ async function startCalculation() {
     INPUT_AREA.style.display = "none";
     const rotations = [
         { azimuthal: 0, polar: 0 },
-        { azimuthal: 90, polar: 90 }, //top
-        //{ azimuthal: 0, polar: 90 }, // right
+        { azimuthal: 90, polar: 90 },
     ];
     const pointCloudThreadPool = new ThreadPool(new DOMStatusElement("Calculating point cloud."));
     for (let i = 0, length = rotations.length; i < length; i++) {
