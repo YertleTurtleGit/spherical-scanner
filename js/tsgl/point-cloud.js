@@ -16,6 +16,12 @@ class PointCloud {
         this.mask = mask;
         this.calculateIndexMaps();
     }
+    getScanCamera() {
+        return new ScanCamera({
+            azimuthalDeg: this.rotation.azimuthal,
+            polarDeg: this.rotation.polar,
+        }, { width: this.width, height: this.height });
+    }
     getWidth() {
         return this.width;
     }
@@ -51,68 +57,94 @@ class PointCloud {
             }
         });
     }
-    getRotatedVertex(vertex) {
-        const dotVec3 = (vector1, vector2) => {
-            let result = 0;
-            for (let i = 0; i < 3; i++) {
-                result += vector1[i] * vector2[i];
-            }
-            return result;
-        };
-        const rotateAround = (vector, axis, angleDegree) => {
-            const angle = angleDegree * DEGREE_TO_RADIAN_FACTOR;
-            if (angle === 0) {
-                return vertex;
-            }
-            const axisDivisor = Math.sqrt(dotVec3(axis, axis));
-            axis = [
-                axis[0] / axisDivisor,
-                axis[1] / axisDivisor,
-                axis[2] / axisDivisor,
-            ];
-            const a = Math.cos(angle / 2.0);
-            const b = -axis[0] * Math.sin(angle / 2.0);
-            const c = -axis[1] * Math.sin(angle / 2.0);
-            const d = -axis[2] * Math.sin(angle / 2.0);
-            const aa = a * a;
-            const bb = b * b;
-            const cc = c * c;
-            const dd = d * d;
-            const bc = b * c;
-            const ad = a * d;
-            const ac = a * c;
-            const ab = a * b;
-            const bd = b * d;
-            const cd = c * d;
-            const rotationMatrix = [
-                [aa + bb - cc - dd, 2 * (bc + ad), 2 * (bd - ac)],
-                [2 * (bc - ad), aa + cc - bb - dd, 2 * (cd + ab)],
-                [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc],
-            ];
-            /*const rotationMatrix: number[][] = [
-               [aa + bb - cc - dd, 2 * (bc - ad), 2 * (bd + ac)],
-               [2 * (bc + ad), aa + cc - bb - dd, 2 * (cd - ab)],
-               [2 * (bd - ac), 2 * (cd + ab), aa + dd - bb - cc],
-            ];*/
-            return [
-                dotVec3(vector, rotationMatrix[0]),
-                dotVec3(vector, rotationMatrix[1]),
-                dotVec3(vector, rotationMatrix[2]),
-            ];
-        };
-        const polar = this.rotation.polar;
-        const azimuthal = this.rotation.azimuthal;
-        const polarRad = polar * DEGREE_TO_RADIAN_FACTOR;
-        const azimuthalRad = azimuthal * DEGREE_TO_RADIAN_FACTOR;
-        const polarAxis = rotateAround([
-            Math.cos(azimuthalRad) * Math.sin(polarRad),
-            Math.sin(azimuthalRad) * Math.sin(polarRad),
-            0,
-        ], [0, 0, 1], 90);
-        const azimuthalRotated = rotateAround(vertex, [0, 0, 1], azimuthal);
-        const polarAzimuthalRotated = rotateAround(azimuthalRotated, polarAxis, polar);
-        return rotateAround(polarAzimuthalRotated, [0, 1, 0], -azimuthal);
-    }
+    /*private getRotatedVertex(vertex: number[]): number[] {
+       const dotVec3: Function = (
+          vector1: number[],
+          vector2: number[]
+       ): number => {
+          let result: number = 0;
+          for (let i = 0; i < 3; i++) {
+             result += vector1[i] * vector2[i];
+          }
+          return result;
+       };
+       const rotateAround: Function = (
+          vector: number[],
+          axis: number[],
+          angleDegree: number
+       ): number[] => {
+          const angle: number = angleDegree * DEGREE_TO_RADIAN_FACTOR;
+ 
+          if (angle === 0) {
+             return vertex;
+          }
+          const axisDivisor: number = Math.sqrt(dotVec3(axis, axis));
+          axis = [
+             axis[0] / axisDivisor,
+             axis[1] / axisDivisor,
+             axis[2] / axisDivisor,
+          ];
+ 
+          const a: number = Math.cos(angle / 2.0);
+          const b: number = -axis[0] * Math.sin(angle / 2.0);
+          const c: number = -axis[1] * Math.sin(angle / 2.0);
+          const d: number = -axis[2] * Math.sin(angle / 2.0);
+ 
+          const aa: number = a * a;
+          const bb: number = b * b;
+          const cc: number = c * c;
+          const dd: number = d * d;
+ 
+          const bc: number = b * c;
+          const ad: number = a * d;
+          const ac: number = a * c;
+          const ab: number = a * b;
+          const bd: number = b * d;
+          const cd: number = c * d;
+ 
+          const rotationMatrix: number[][] = [
+             [aa + bb - cc - dd, 2 * (bc + ad), 2 * (bd - ac)],
+             [2 * (bc - ad), aa + cc - bb - dd, 2 * (cd + ab)],
+             [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc],
+          ];
+ 
+          return [
+             dotVec3(vector, rotationMatrix[0]),
+             dotVec3(vector, rotationMatrix[1]),
+             dotVec3(vector, rotationMatrix[2]),
+          ];
+       };
+ 
+       const polar: number = this.rotation.polar;
+       const azimuthal: number = this.rotation.azimuthal;
+ 
+       const polarRad: number = polar * DEGREE_TO_RADIAN_FACTOR;
+       const azimuthalRad: number = azimuthal * DEGREE_TO_RADIAN_FACTOR;
+ 
+       const polarAxis: number[] = rotateAround(
+          [
+             Math.cos(azimuthalRad) * Math.sin(polarRad),
+             Math.sin(azimuthalRad) * Math.sin(polarRad),
+             0,
+          ],
+          [0, 0, 1],
+          90
+       );
+ 
+       const azimuthalRotated: number[] = rotateAround(
+          vertex,
+          [0, 0, 1],
+          azimuthal
+       );
+ 
+       const polarAzimuthalRotated: number[] = rotateAround(
+          azimuthalRotated,
+          polarAxis,
+          polar
+       );
+ 
+       return rotateAround(polarAzimuthalRotated, [0, 1, 0], -azimuthal);
+    }*/
     getVertexIndex(pixelIndex) {
         return this.pixelToVertexIndexMap[pixelIndex];
     }
@@ -315,11 +347,16 @@ class PointCloud {
                 result.averageError += zError / resolution;
                 result.highestError = Math.max(result.highestError, zError);
                 result.zErrors[x] = zError;
-                const gpuVertex = this.getRotatedVertex([
+                /*const gpuVertex: number[] = this.getRotatedVertex([
+                   x / this.width - 0.5,
+                   y / this.width - 0.5,
+                   zAverage / this.width,
+                ]);*/
+                const gpuVertex = [
                     x / this.width - 0.5,
                     y / this.width - 0.5,
                     zAverage / this.width,
-                ]);
+                ];
                 this.gpuVertices[vectorIndex + 0 /* X */] = gpuVertex[0];
                 this.gpuVertices[vectorIndex + 1 /* Y */] = gpuVertex[1];
                 this.gpuVertices[vectorIndex + 2 /* Z */] = gpuVertex[2];

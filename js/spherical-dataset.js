@@ -60,7 +60,7 @@ class SphericalDataset {
             if (lightAzimuthalAngleName === "all") {
                 lightAzimuthalAngle = Infinity;
                 lightPolarAngle = Infinity;
-                //TODO: Fix fro to front
+                // TODO: Fix fro to front
             }
             else if (lightAzimuthalAngleName === "fro") {
                 lightAzimuthalAngle = 0;

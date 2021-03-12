@@ -10,7 +10,8 @@ async function startCalculation(): Promise<void> {
 
    const rotations: { azimuthal: number; polar: number }[] = [
       { azimuthal: 0, polar: 0 }, // front
-      { azimuthal: 90, polar: 90 }, //top
+      { azimuthal: 0, polar: 180 }, // back
+      //{ azimuthal: 90, polar: 90 }, //top
       //{ azimuthal: 0, polar: 90 }, // right
    ];
    const pointCloudThreadPool: ThreadPool = new ThreadPool(
@@ -23,14 +24,8 @@ async function startCalculation(): Promise<void> {
 
    const pointClouds: PointCloud[] = await pointCloudThreadPool.run();
 
-   const vertices: number[] = [];
-   for (let i = 0, length = pointClouds.length; i < length; i++) {
-      const newVertices: number[] = pointClouds[i].getGpuVertices();
-      vertices.push(...newVertices);
-   }
-
    const pointCloudRenderer = new PointCloudRenderer(
-      vertices,
+      pointClouds,
       POINT_CLOUD_AREA
    );
 
